@@ -1,5 +1,9 @@
 # Changes
 
+* 2026-04-02 - entrypoint: Dante `-N` from online CPU count
+
+- **`entrypoint.sh`**: Detects online CPUs (`nproc`, else `getconf _NPROCESSORS_ONLN`, else `1`); starts `danted` with `-N` set to that count. Optional override **`DANTE_N`**. Documented in README.md and dot-env-example.
+
 * 2026-04-02 - CI: push `latest` to GHCR on default-branch builds
 
 - `.github/workflows/build.yml`: `docker/metadata-action` `type=raw` adds tag `latest` when `github.ref` is the default branch (same image as `main` / branch name)

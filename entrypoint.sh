@@ -8,6 +8,29 @@ DANTE_CLIENTMETHOD="${DANTE_CLIENTMETHOD:-none}"
 DANTE_USER_PRIVILEGED="${DANTE_USER_PRIVILEGED:-root}"
 DANTE_USER_UNPRIVILEGED="${DANTE_USER_UNPRIVILEGED:-nobody}"
 
+# Online CPU count for Dante -N (main servers). Unset DANTE_N to use this default.
+detect_cpu_count() {
+  local n
+  if n=$(nproc 2>/dev/null) && [[ -n "${n}" ]]; then
+    :
+  elif n=$(getconf _NPROCESSORS_ONLN 2>/dev/null) && [[ -n "${n}" ]]; then
+    :
+  else
+    n=1
+  fi
+  [[ "${n}" =~ ^[0-9]+$ ]] || n=1
+  if [[ "${n}" -lt 1 ]]; then
+    n=1
+  fi
+  echo "${n}"
+}
+
+DANTE_N="${DANTE_N:-$(detect_cpu_count)}"
+if ! [[ "${DANTE_N}" =~ ^[0-9]+$ ]] || [[ "${DANTE_N}" -lt 1 ]]; then
+  echo "WARNING: invalid DANTE_N=${DANTE_N:-empty}, using 1" >&2
+  DANTE_N=1
+fi
+
 # Interface for DANTE_ASSIGN_* (default: first "default" route dev, else first non-lo, else eth0).
 detect_default_device() {
   local d
@@ -149,5 +172,5 @@ export TMPDIR="/run/danted"
 mkdir -p "${TMPDIR}"
 chmod 0700 "${TMPDIR}"
 
-echo "INFO: Starting danted..." >&2
-exec /usr/sbin/danted -f "${DANTE_CONFIG_FILE}" -N 1
+echo "INFO: Starting danted with -N ${DANTE_N} (Dante main servers; default matches online CPUs)" >&2
+exec /usr/sbin/danted -f "${DANTE_CONFIG_FILE}" -N "${DANTE_N}"

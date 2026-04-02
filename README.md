@@ -74,6 +74,7 @@ All configuration is handled via environment variables. Copy `dot-env-example` t
 | `DANTE_ASSIGN_IPV4` | *(unset)* | Before discovery: comma- or space-separated `addr/prefix` tokens for `ip addr add` (requires `CAP_NET_ADMIN` when adding new addresses; ignored if `DANTE_CONFIG_FILE` is set) |
 | `DANTE_ASSIGN_IPV6` | *(unset)* | Same for IPv6 (e.g. `2001:db8:1::10/64`) |
 | `DANTE_CONFIG_FILE` | *(unset)* | When set, skip auto-detection and use this config file path |
+| `DANTE_N` | *(online CPUs)* | Dante `-N` value: number of main server processes. Defaults to `nproc` / `getconf _NPROCESSORS_ONLN` (minimum `1`). Dante’s docs note values above CPU count rarely help performance. |
 
 ### Rotation Modes
 
@@ -97,7 +98,7 @@ At container startup, `entrypoint.sh`:
 2. Discovers all non-loopback, non-link-local **IPv4** addresses via `ip -4 addr show scope global`
 3. Discovers all non-loopback, non-link-local **IPv6** addresses via `ip -6 addr show scope global`
 4. Generates `/tmp/danted.conf` with each discovered address as an `external:` statement
-5. Starts `danted` as PID 1 via `exec` for proper signal handling
+5. Starts `danted` as PID 1 via `exec` with `-N` set to the online CPU count (override with `DANTE_N`) for proper signal handling
 
 All entrypoint informational messages are written to stderr, ensuring they appear in `docker logs` alongside Dante's own output.
 
