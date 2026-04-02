@@ -7,6 +7,11 @@ Wants=network-online.target
 ContainerName=danted
 Image=ghcr.io/colin-stubbs/docker-danted:latest
 
+# Connect to a custom network and assign specific IP's if desired
+# Network=systemd-danted
+# IP=203.0.113.128
+# IP6=2001:db8::128
+
 # Listen on host port 1080.
 PublishPort=1080:1080
 
@@ -18,6 +23,8 @@ Tmpfs=/run:nosuid,size=8m
 # Optional env file (one KEY=VALUE per line), e.g.:
 # DANTE_PORT=1080
 # DANTE_ROTATION=same-same
+# DANTE_ASSIGN_IPV4=203.0.113.4/24
+# DANTE_ASSIGN_IPV6=2001:db8:1::10/64
 # DANTE_CONFIG_FILE=/etc/danted.conf
 # EnvironmentFile=%h/.config/containers/danted.env
 
@@ -25,7 +32,7 @@ Tmpfs=/run:nosuid,size=8m
 # Volume=%h/.config/danted/danted.conf:/etc/danted.conf:ro,Z
 
 # Needed if you want to add extra interface addresses from inside container.
-#AddCapability=NET_ADMIN
+AddCapability=NET_ADMIN
 
 AutoUpdate=registry
 

@@ -46,6 +46,18 @@ docker compose up -d
 
 The included `compose.yml` sets up a dual-stack bridge network with both IPv4 and IPv6 subnets, and runs the container with a read-only root filesystem.
 
+### Run with Podman (Quadlet)
+
+Copy `danted.container` and `proxy_net.network` into `~/.config/containers/systemd/` (or `/etc/containers/systemd/` for system-wide). The network unit defines IPv4 and IPv6 subnets; the container unit sets `Network=proxy_net.network` with static `IP=` and `IP6=` for the primary pair of addresses.
+
+```bash
+systemctl --user daemon-reload
+systemctl --user start proxy_net-network.service
+systemctl --user enable --now danted.service
+```
+
+Quadlet only maps one static IPv4 and one static IPv6 per container (`IP=` / `IP6=`). For **additional** addresses use **`DANTE_ASSIGN_IPV4`** / **`DANTE_ASSIGN_IPV6`** (see Configuration) so the entrypoint runs `ip addr add` before discovery, or join another network with a second `Network=` line (and `:ip=` on that network).
+
 ## Configuration
 
 All configuration is handled via environment variables. Copy `dot-env-example` to `.env` and adjust as needed.
@@ -58,6 +70,9 @@ All configuration is handled via environment variables. Copy `dot-env-example` t
 | `DANTE_CLIENTMETHOD` | `none` | Client authentication method |
 | `DANTE_USER_PRIVILEGED` | `root` | Privileged user for danted |
 | `DANTE_USER_UNPRIVILEGED` | `nobody` | Unprivileged user danted drops to |
+| `DANTE_DEVICE` | *(auto)* | Interface for `DANTE_ASSIGN_*` (default: default-route device, else first non-`lo`, else `eth0`) |
+| `DANTE_ASSIGN_IPV4` | *(unset)* | Before discovery: comma- or space-separated `addr/prefix` tokens for `ip addr add` (requires `CAP_NET_ADMIN` when adding new addresses; ignored if `DANTE_CONFIG_FILE` is set) |
+| `DANTE_ASSIGN_IPV6` | *(unset)* | Same for IPv6 (e.g. `2001:db8:1::10/64`) |
 | `DANTE_CONFIG_FILE` | *(unset)* | When set, skip auto-detection and use this config file path |
 
 ### Rotation Modes
@@ -78,10 +93,11 @@ The container is designed to run with `--read-only`. The entrypoint writes the a
 
 At container startup, `entrypoint.sh`:
 
-1. Discovers all non-loopback, non-link-local **IPv4** addresses via `ip -4 addr show scope global`
-2. Discovers all non-loopback, non-link-local **IPv6** addresses via `ip -6 addr show scope global`
-3. Generates `/tmp/danted.conf` with each discovered address as an `external:` statement
-4. Starts `danted` as PID 1 via `exec` for proper signal handling
+1. Optionally runs **`ip addr add addr/prefix dev IFACE`** for each token in **`DANTE_ASSIGN_IPV4`** / **`DANTE_ASSIGN_IPV6`** (tokens must include a prefix length; IFACE from **`DANTE_DEVICE`** or auto-detected)
+2. Discovers all non-loopback, non-link-local **IPv4** addresses via `ip -4 addr show scope global`
+3. Discovers all non-loopback, non-link-local **IPv6** addresses via `ip -6 addr show scope global`
+4. Generates `/tmp/danted.conf` with each discovered address as an `external:` statement
+5. Starts `danted` as PID 1 via `exec` for proper signal handling
 
 All entrypoint informational messages are written to stderr, ensuring they appear in `docker logs` alongside Dante's own output.
 
@@ -108,16 +124,22 @@ docker run -d \
   ghcr.io/colin-stubbs/docker-danted:latest
 ```
 
-## Multiple IPv6 Addresses (Production)
+## Multiple IPv4 / IPv6 Addresses (Production)
 
-For production use with multiple outbound IPv6 addresses, assign additional IPs to the container's network interface. With Docker Compose and macvlan/ipvlan drivers, or by adding addresses post-startup:
+Prefer **`DANTE_ASSIGN_IPV4`** and **`DANTE_ASSIGN_IPV6`** so the entrypoint adds `addr/prefix` to the container interface **before** discovery (set `cap_add: [NET_ADMIN]` or equivalent when the kernel needs it). Example:
 
 ```bash
-docker exec danted ip -6 addr add 2001:db8:1::11/64 dev eth0
-docker exec danted ip -6 addr add 2001:db8:1::12/64 dev eth0
+docker run -d --cap-add=NET_ADMIN \
+  -e DANTE_ASSIGN_IPV4=203.0.113.4/24,203.0.113.5/24 \
+  -e DANTE_ASSIGN_IPV6='2001:db8:1::10/64 2001:db8:1::11/64' \
+  ...
 ```
 
-Then restart the container so the entrypoint re-detects all addresses.
+Alternatively assign addresses manually, then restart so the entrypoint re-detects:
+
+```bash
+docker exec danted ip -6 addr add 2001:db8:1::12/64 dev eth0
+```
 
 ## Building and Testing Locally
 
@@ -209,7 +231,7 @@ The GitHub Actions workflow (`.github/workflows/build.yml`) automatically:
 
 - **Lint** — Hadolint for Dockerfile best practices, ShellCheck for `entrypoint.sh`
 - **Trivy filesystem scan** — scans source for vulnerabilities, misconfigurations, and secrets (HIGH/CRITICAL)
-- **Build** — multi-architecture images (`linux/amd64`, `linux/arm64`) on push to `main` or semver tags
+- **Build** — multi-architecture images (`linux/amd64`, `linux/arm64`) on push to `main` or semver tags; pushes to the default branch also tag **`latest`** (same digest as the branch tag, e.g. `main`)
 - **Trivy container scan** — scans the published image for vulnerabilities and uploads results as SARIF to GitHub Security
 - Pull requests run lint, trivy-fs, and build (no push)
 - Uses GitHub Actions cache for Docker layer caching

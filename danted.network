@@ -1,0 +1,16 @@
+# Quadlet network unit — dual-stack bridge for danted.container
+# Install next to danted.container, e.g. ~/.config/containers/systemd/
+# Then: systemctl --user daemon-reload && systemctl --user start proxy_net-network.service
+#
+# Podman will create a network named systemd-proxy_net (unless NetworkName= overrides).
+# Subnets align with compose.yml for consistency between Docker Compose and Podman.
+
+[Network]
+Driver=bridge
+IPv6=true
+
+Subnet=203.0.113.0/24
+Gateway=203.0.113.1
+
+Subnet=2001:db8:1::/64
+Gateway=2001:db8:1::1

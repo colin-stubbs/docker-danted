@@ -15,7 +15,7 @@ services:
       proxy_net:
         ipv4_address: 172.28.0.10
         ipv6_address: 2001:db8:1::10
-    # Needed if you want to add extra interface addresses from inside container.
+    # Needed for DANTE_ASSIGN_IPV4 / DANTE_ASSIGN_IPV6 (ip addr add at startup).
     #cap_add:
     #  - NET_ADMIN
     sysctls:

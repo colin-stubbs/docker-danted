@@ -18,6 +18,14 @@ DANTE_CLIENTMETHOD=none
 DANTE_USER_PRIVILEGED=root
 DANTE_USER_UNPRIVILEGED=nobody
 
+# Optional: before discovery, run `ip addr add addr/prefix dev IFACE` for each token
+# (comma or whitespace separated). Tokens MUST include a prefix length. IFACE defaults
+# to the default-route device, or set DANTE_DEVICE=eth0. Requires CAP_NET_ADMIN when
+# adding new addresses. Ignored when DANTE_CONFIG_FILE is set.
+# DANTE_DEVICE=eth0
+# DANTE_ASSIGN_IPV4=203.0.113.4/24,203.0.113.5/24
+# DANTE_ASSIGN_IPV6=2001:db8:1::10/64 2001:db8:1::11/64
+
 # Set this to use a custom config and skip auto-detection.
 # When set, the entrypoint will use this file as-is instead of generating one.
 # Mount your config into the container, e.g. -v /path/to/danted.conf:/etc/danted.conf:ro

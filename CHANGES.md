@@ -1,5 +1,20 @@
 # Changes
 
+* 2026-04-02 - CI: push `latest` to GHCR on default-branch builds
+
+- `.github/workflows/build.yml`: `docker/metadata-action` `type=raw` adds tag `latest` when `github.ref` is the default branch (same image as `main` / branch name)
+
+* 2026-04-02 - DANTE_ASSIGN_IPV4 / DANTE_ASSIGN_IPV6 run `ip addr add` before discovery
+
+- entrypoint.sh: optional comma- or space-separated `addr/prefix` lists applied with `ip addr add` on `DANTE_DEVICE` (or auto-detected interface) before `ip` discovery and danted.conf generation; requires `CAP_NET_ADMIN` when adding new addresses
+- Replaced prior merge-only `DANTE_EXTERNAL_*` behaviour; documented in dot-env-example, README.md, danted.conf header, `danted.container`, and compose.yml `cap_add` comment
+
+* 2026-04-02 - Quadlet: dual-stack network and extra IP documentation
+
+- Added `proxy_net.network` Quadlet unit (IPv4 + IPv6 subnets) for use with `danted.container`
+- Updated `danted.container` with `Network=`, `IP=`, `IP6=`, `Sysctl=`, and comments for additional IPv4/IPv6 beyond the primary pair
+- Documented Podman Quadlet install and multi-address options in README.md
+
 * 2026-04-02 - Initial release
 
 - Dockerfile based on debian:forky-slim with dante-server 1.4.4 from apt (amd64 + arm64)

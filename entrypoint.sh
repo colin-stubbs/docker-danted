@@ -8,6 +8,65 @@ DANTE_CLIENTMETHOD="${DANTE_CLIENTMETHOD:-none}"
 DANTE_USER_PRIVILEGED="${DANTE_USER_PRIVILEGED:-root}"
 DANTE_USER_UNPRIVILEGED="${DANTE_USER_UNPRIVILEGED:-nobody}"
 
+# Interface for DANTE_ASSIGN_* (default: first "default" route dev, else first non-lo, else eth0).
+detect_default_device() {
+  local d
+  d=$(ip route show default 2>/dev/null | awk '/default/ {
+    for (i = 1; i <= NF; i++) if ($i == "dev") { print $(i + 1); exit }
+  }' | head -n1)
+  if [[ -n "$d" ]]; then
+    echo "$d"
+    return 0
+  fi
+  d=$(ip -o link show 2>/dev/null | awk -F': ' '$2 != "lo" && $2 != "" { print $2; exit }')
+  if [[ -n "$d" ]]; then
+    echo "$d"
+    return 0
+  fi
+  echo "eth0"
+}
+
+# Parse comma- or whitespace-separated tokens.
+parse_token_list() {
+  local raw="${1:-}"
+  [[ -z "${raw// }" ]] && return 0
+  local normalized="${raw//,/ }"
+  local token
+  for token in $normalized; do
+    [[ -n "$token" ]] && printf '%s\n' "$token"
+  done
+}
+
+# Run before discovery: ip addr add addr/prefix dev IFACE for each token.
+# Requires CAP_NET_ADMIN in the container if addresses are not already present.
+assign_addrs_from_env() {
+  local dev="$1"
+  local cidr
+  while IFS= read -r cidr; do
+    [[ -z "$cidr" ]] && continue
+    if [[ "$cidr" != */* ]]; then
+      echo "WARNING: skip \"${cidr}\" (DANTE_ASSIGN_* tokens must be addr/prefix, e.g. 203.0.113.4/24)" >&2
+      continue
+    fi
+    if ip addr add "${cidr}" dev "${dev}" 2>/dev/null; then
+      echo "INFO: ip addr add ${cidr} dev ${dev}" >&2
+    else
+      echo "WARNING: ip addr add ${cidr} dev ${dev} failed (already present, wrong subnet, or missing CAP_NET_ADMIN)" >&2
+    fi
+  done
+}
+
+apply_assign_lists() {
+  local dev
+  dev="${DANTE_DEVICE:-$(detect_default_device)}"
+  if [[ -z "${DANTE_ASSIGN_IPV4:-}" && -z "${DANTE_ASSIGN_IPV6:-}" ]]; then
+    return 0
+  fi
+  echo "INFO: Applying DANTE_ASSIGN_IPV4 / DANTE_ASSIGN_IPV6 on dev ${dev} (before discovery)" >&2
+  parse_token_list "${DANTE_ASSIGN_IPV4:-}" | assign_addrs_from_env "${dev}"
+  parse_token_list "${DANTE_ASSIGN_IPV6:-}" | assign_addrs_from_env "${dev}"
+}
+
 discover_ipv4() {
   ip -4 addr show scope global 2>/dev/null \
     | grep -oP 'inet \K[0-9.]+' \
@@ -21,7 +80,7 @@ discover_ipv6() {
 }
 
 generate_config() {
-  local ipv4_addrs ipv6_addrs
+  local -a ipv4_addrs ipv6_addrs
   mapfile -t ipv4_addrs < <(discover_ipv4)
   mapfile -t ipv6_addrs < <(discover_ipv6)
 
@@ -78,6 +137,7 @@ if [ -n "${DANTE_CONFIG_FILE:-}" ]; then
   echo "INFO: DANTE_CONFIG_FILE is set, using existing config at ${DANTE_CONFIG_FILE}" >&2
 else
   DANTE_CONFIG_FILE="/tmp/danted.conf"
+  apply_assign_lists
   echo "INFO: Auto-detecting addresses and generating ${DANTE_CONFIG_FILE}..." >&2
   generate_config > "${DANTE_CONFIG_FILE}"
   echo "INFO: Generated config:" >&2
