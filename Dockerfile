@@ -5,6 +5,7 @@ RUN apt-get update \
          dante-server \
          iproute2 \
          netcat-openbsd \
+         curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
