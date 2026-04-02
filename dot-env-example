@@ -1,0 +1,24 @@
+# Dante sockd configuration
+# Copy this file to .env and adjust values
+
+# Port to listen on (both IPv4 and IPv6)
+DANTE_PORT=1080
+
+# External address rotation: same-same, route, or none
+# same-same: outbound source IP matches the IP the client connected to
+# route:     use routing table (allows cross-protocol IPv4<->IPv6)
+# none:      use first external address for all connections
+DANTE_ROTATION=same-same
+
+# Authentication methods (none = no auth required)
+DANTE_SOCKSMETHOD=none
+DANTE_CLIENTMETHOD=none
+
+# Privileged/unprivileged users for sockd process
+DANTE_USER_PRIVILEGED=root
+DANTE_USER_UNPRIVILEGED=nobody
+
+# Set this to use a custom config and skip auto-detection.
+# When set, the entrypoint will use this file as-is instead of generating one.
+# Mount your config into the container, e.g. -v /path/to/danted.conf:/etc/danted.conf:ro
+# DANTE_CONFIG_FILE=/etc/danted.conf

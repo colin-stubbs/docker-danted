@@ -1,0 +1,37 @@
+[Unit]
+Description=Dante SOCKS5 proxy container
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+ContainerName=danted
+Image=ghcr.io/colin-stubbs/docker-danted:latest
+
+# Listen on host port 1080.
+PublishPort=1080:1080
+
+# Match hardened runtime defaults used in Docker examples.
+ReadOnly=true
+Tmpfs=/tmp:noexec,nosuid,size=1m
+Tmpfs=/run:nosuid,size=8m
+
+# Optional env file (one KEY=VALUE per line), e.g.:
+# DANTE_PORT=1080
+# DANTE_ROTATION=same-same
+# DANTE_CONFIG_FILE=/etc/danted.conf
+# EnvironmentFile=%h/.config/containers/danted.env
+
+# Optional custom config mount.
+# Volume=%h/.config/danted/danted.conf:/etc/danted.conf:ro,Z
+
+# Needed if you want to add extra interface addresses from inside container.
+#AddCapability=NET_ADMIN
+
+AutoUpdate=registry
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

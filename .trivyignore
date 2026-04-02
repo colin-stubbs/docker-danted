@@ -1,0 +1,4 @@
+# DS-0002: Dante requires root at startup to bind sockets and perform
+# privileged operations, then drops to user.unprivileged (nobody) via
+# its own config. Adding USER in the Dockerfile would prevent startup.
+DS-0002
