@@ -11,11 +11,12 @@ RUN apt-get update \
 
 COPY danted.conf /etc/danted.conf
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY healthcheck.sh /usr/local/bin/healthcheck
+RUN chmod +x /entrypoint.sh /usr/local/bin/healthcheck
 
 EXPOSE 1080
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD nc -z 127.0.0.1 ${DANTE_PORT:-1080} || exit 1
+HEALTHCHECK --interval=30s --timeout=15s --start-period=10s --retries=3 \
+  CMD ["/usr/local/bin/healthcheck"]
 
 ENTRYPOINT ["/entrypoint.sh"]

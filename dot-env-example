@@ -21,6 +21,9 @@ DANTE_USER_UNPRIVILEGED=nobody
 # Dante -N: number of main server processes (default: online CPU count via nproc)
 # DANTE_N=4
 
+# URL for Docker HEALTHCHECK: curl -I (HEAD); SOCKS URL uses first global IPv4 (else IPv6) on the container
+# DANTE_HEALTHCHECK_URL=http://connectivitycheck.gstatic.com/generate_204
+
 # Optional: before discovery, run `ip addr add addr/prefix dev IFACE` for each token
 # (comma or whitespace separated). Tokens MUST include a prefix length. IFACE defaults
 # to the default-route device, or set DANTE_DEVICE=eth0. Requires CAP_NET_ADMIN when

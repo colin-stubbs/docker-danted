@@ -75,6 +75,7 @@ All configuration is handled via environment variables. Copy `dot-env-example` t
 | `DANTE_ASSIGN_IPV6` | *(unset)* | Same for IPv6 (e.g. `2001:db8:1::10/64`) |
 | `DANTE_CONFIG_FILE` | *(unset)* | When set, skip auto-detection and use this config file path |
 | `DANTE_N` | *(online CPUs)* | Dante `-N` value: number of main server processes. Defaults to `nproc` / `getconf _NPROCESSORS_ONLN` (minimum `1`). Dante’s docs note values above CPU count rarely help performance. |
+| `DANTE_HEALTHCHECK_URL` | `http://connectivitycheck.gstatic.com/generate_204` | URL used by the image **`healthcheck`** script: **`curl -I`** (HEAD) via **`socks5h://…:$DANTE_PORT`**. The script picks the **first global IPv4** (else **first global IPv6**) from `ip addr` for the SOCKS URL so **`same-same`** uses a real external, not `127.0.0.1`. Default target is Google’s [`generate_204`](http://connectivitycheck.gstatic.com/generate_204). |
 
 ### Rotation Modes
 
@@ -175,6 +176,10 @@ curl -x socks5h://127.0.0.1:1080 https://httpbin.org/ip
 ```
 
 ### Verify healthcheck
+
+The image **`HEALTHCHECK`** runs **`/usr/local/bin/healthcheck`**: **`curl -I`** (HEAD) to **`DANTE_HEALTHCHECK_URL`** (default Google [`generate_204`](http://connectivitycheck.gstatic.com/generate_204)) through **`socks5h://<addr>:$DANTE_PORT`**, where **`<addr>`** is the **first scope-global IPv4** on the container (else **first IPv6**), matching the entrypoint’s address discovery. That way, with **`external.rotation: same-same`**, the outbound path uses the same real address the client connected to; connecting to **`127.0.0.1`** would make Dante try to source from loopback and fail. If there is no global address, the healthcheck exits uncleanly (ensure the container has routable IPs). Set **`DANTE_HEALTHCHECK_URL`** to an internal URL when the container must not reach the public internet.
+
+Bare TCP checks (**`nc -z`**) or incomplete SOCKS handshakes can still make danted log **`eof from local client`**; a full HTTP via the proxy avoids that pattern for the health probe itself.
 
 ```bash
 docker inspect --format='{{.State.Health.Status}}' dante-test

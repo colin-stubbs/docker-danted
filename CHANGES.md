@@ -1,5 +1,13 @@
 # Changes
 
+* 2026-04-02 - Health check: SOCKS via first global IPv4/IPv6 (same-same safe)
+
+- **`healthcheck.sh`**: Builds **`socks5h://<addr>:port`** using the first **`ip` scope-global IPv4**, else first IPv6 (same discovery idea as **`entrypoint.sh`**), not **`127.0.0.1`**, so **`same-same`** outbound source is a real address. Fails if no global address exists. README.md and dot-env-example updated.
+
+* 2026-04-02 - Health check: HEAD to `generate_204` by default
+
+- **`healthcheck.sh`**: Default **`DANTE_HEALTHCHECK_URL`** is **`http://connectivitycheck.gstatic.com/generate_204`**; uses **`curl -I`** (HEAD) via **`socks5h://127.0.0.1:$DANTE_PORT`**. README.md and dot-env-example updated.
+
 * 2026-04-02 - entrypoint: Dante `-N` from online CPU count
 
 - **`entrypoint.sh`**: Detects online CPUs (`nproc`, else `getconf _NPROCESSORS_ONLN`, else `1`); starts `danted` with `-N` set to that count. Optional override **`DANTE_N`**. Documented in README.md and dot-env-example.
